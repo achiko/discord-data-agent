@@ -1,0 +1,83 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Exports directory (contains Discord data)
+exports/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+*.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database
+*.sql.backup
+*.dump
+pgdata/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temp files
+tmp/
+.tmp/
+temp/
+
+# Config directory (may contain sensitive data)
+.discord-analyzer/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Docker
+docker-compose.override.yml
+
+# Testing
+.jest/
+jest-results/
+
+# Package managers
+.pnpm-store/
+.yarn/
+
+# Claude
+.claude/
+
+# Drizzle
+drizzle/meta/
+
+# Misc
+*.pem
+*.key
+*.cert

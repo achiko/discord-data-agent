@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: discord_analyzer_db
+    environment:
+      POSTGRES_USER: discord_analyzer
+      POSTGRES_PASSWORD: discord_analyzer
+      POSTGRES_DB: discord_analyzer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U discord_analyzer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  discord-exporter:
+    image: tyrrrz/discordchatexporter:stable
+    container_name: discord_exporter
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+    volumes:
+      - ./exports:/app/out
+    profiles:
+      - export
+    # This service is run on-demand, not continuously
+
+volumes:
+  postgres_data:
