@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { searchMessages } from '../../services/search.js';
+import { searchMessages, compareSearchMethods } from '../../services/search.js';
 import type { SearchOptions } from '../../types/index.js';
 
 interface SearchQuery {
@@ -49,6 +49,42 @@ export async function searchRoutes(fastify: FastifyInstance) {
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ error: 'Search failed' });
+    }
+  });
+
+  // Compare endpoint - returns results from all three search methods
+  fastify.get<{ Querystring: SearchQuery }>('/search/compare', async (request, reply) => {
+    const { q, channel, user, from, to, limit = '20', offset = '0' } = request.query;
+
+    if (!q) {
+      return reply.code(400).send({ error: 'Query parameter "q" is required' });
+    }
+
+    const options: SearchOptions = {
+      query: q,
+      channelId: channel,
+      userId: user,
+      fromDate: from ? new Date(from) : undefined,
+      toDate: to ? new Date(to) : undefined,
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
+    };
+
+    try {
+      const results = await compareSearchMethods(options);
+      return {
+        results,
+        query: q,
+        filters: {
+          channel,
+          user,
+          from,
+          to,
+        },
+      };
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(500).send({ error: 'Compare search failed' });
     }
   });
 }

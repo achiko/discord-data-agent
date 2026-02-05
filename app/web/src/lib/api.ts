@@ -17,6 +17,15 @@ export interface SearchResponse {
   query: string;
 }
 
+export interface CompareSearchResponse {
+  results: {
+    keyword: SearchResult[];
+    semantic: SearchResult[];
+    hybrid: SearchResult[];
+  };
+  query: string;
+}
+
 export interface Channel {
   id: string;
   name: string;
@@ -135,6 +144,25 @@ export const api = {
     if (params.limit) searchParams.set('limit', params.limit.toString());
 
     return fetchApi(`/search?${searchParams.toString()}`);
+  },
+
+  compareSearch: (params: {
+    q: string;
+    channel?: string;
+    user?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+  }): Promise<CompareSearchResponse> => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('q', params.q);
+    if (params.channel) searchParams.set('channel', params.channel);
+    if (params.user) searchParams.set('user', params.user);
+    if (params.from) searchParams.set('from', params.from);
+    if (params.to) searchParams.set('to', params.to);
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+
+    return fetchApi(`/search/compare?${searchParams.toString()}`);
   },
 
   getChannels: (): Promise<{ channels: Channel[] }> => {
