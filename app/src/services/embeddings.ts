@@ -142,19 +142,22 @@ export async function generateEmbeddings(options: EmbeddingOptions): Promise<Emb
         const embedding = response.data[j].embedding;
         const { messageId, chunkIndex, text } = textsToEmbed[j];
 
+        // Convert embedding array to pgvector string format
+        const embeddingString = `[${embedding.join(',')}]`;
+
         await db
           .insert(messageEmbeddings)
           .values({
             messageId,
             chunkIndex,
             chunkText: text,
-            embedding: embedding,
+            embedding: embeddingString as unknown as number[],
           })
           .onConflictDoUpdate({
             target: [messageEmbeddings.messageId, messageEmbeddings.chunkIndex],
             set: {
               chunkText: text,
-              embedding: embedding,
+              embedding: embeddingString as unknown as number[],
             },
           });
 
