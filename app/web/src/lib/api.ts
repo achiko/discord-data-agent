@@ -4,12 +4,16 @@ export interface SearchResult {
   messageId: string;
   channelId: string;
   channelName: string;
+  guildId: string;
   userId: string;
   username: string;
   content: string;
   timestamp: string;
   score: number;
 }
+
+export const getDiscordMessageUrl = (guildId: string, channelId: string, messageId: string) =>
+  `https://discord.com/channels/${guildId}/${channelId}/${messageId}`
 
 export interface SearchResponse {
   results: SearchResult[];
@@ -82,6 +86,7 @@ export interface Message {
   reactionsJson: unknown;
   channelId: string;
   channelName: string;
+  guildId: string;
   userId: string;
   username: string;
   userAvatar: string | null;

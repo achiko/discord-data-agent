@@ -1,18 +1,35 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search as SearchIcon, Filter, Hash, Loader2, LayoutGrid, List } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { api, type SearchResult, type CompareSearchResponse } from '../lib/api'
+import { Search as SearchIcon, Filter, Hash, Loader2, LayoutGrid, List, ExternalLink } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { api, type SearchResult, type CompareSearchResponse, getDiscordMessageUrl } from '../lib/api'
 import { format } from 'date-fns'
 
 type ViewMode = 'single' | 'compare'
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('')
-  const [searchType, setSearchType] = useState<'hybrid' | 'semantic' | 'keyword'>('hybrid')
-  const [channelFilter, setChannelFilter] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('single')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const query = searchParams.get('q') || ''
+  const searchType = (searchParams.get('type') as 'hybrid' | 'semantic' | 'keyword') || 'hybrid'
+  const channelFilter = searchParams.get('channel') || ''
+  const viewMode = (searchParams.get('mode') as ViewMode) || 'single'
+  const showFilters = searchParams.get('filters') === 'true'
+
+  const updateParams = (updates: Record<string, string | null>) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      Object.entries(updates).forEach(([k, v]) => {
+        v === null || v === '' ? next.delete(k) : next.set(k, v)
+      })
+      return next
+    }, { replace: true })
+  }
+
+  const setQuery = (v: string) => updateParams({ q: v || null })
+  const setSearchType = (v: 'hybrid' | 'semantic' | 'keyword') => updateParams({ type: v === 'hybrid' ? null : v })
+  const setChannelFilter = (v: string) => updateParams({ channel: v || null })
+  const setViewMode = (v: ViewMode) => updateParams({ mode: v === 'single' ? null : v })
+  const setShowFilters = (v: boolean) => updateParams({ filters: v ? 'true' : null })
 
   const { data: channelsData } = useQuery({
     queryKey: ['channels'],
@@ -22,13 +39,13 @@ export default function SearchPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['search', query, searchType, channelFilter],
     queryFn: () => api.search({ q: query, type: searchType, channel: channelFilter || undefined }),
-    enabled: false,
+    enabled: !!query.trim(),
   })
 
   const { data: compareData, isLoading: isCompareLoading, error: compareError, refetch: refetchCompare } = useQuery({
     queryKey: ['search-compare', query, channelFilter],
     queryFn: () => api.compareSearch({ q: query, channel: channelFilter || undefined }),
-    enabled: false,
+    enabled: viewMode === 'compare' && !!query.trim(),
   })
 
   const handleSearch = (e: React.FormEvent) => {
@@ -228,10 +245,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
   const date = format(new Date(result.timestamp), 'MMM d, yyyy h:mm a')
 
   return (
-    <Link
-      to={`/messages/${result.messageId}`}
-      className="block p-4 bg-[#36393f] rounded-lg hover:bg-[#3f4248] transition-colors"
-    >
+    <div className="p-4 bg-[#36393f] rounded-lg hover:bg-[#3f4248] transition-colors">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="font-medium text-white">{result.username}</span>
@@ -245,10 +259,22 @@ function SearchResultCard({ result }: { result: SearchResult }) {
             {scorePercent}% match
           </span>
           <span className="text-xs text-gray-500">{date}</span>
+          <a
+            href={getDiscordMessageUrl(result.guildId, result.channelId, result.messageId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-gray-400 hover:text-[#5865f2] transition-colors"
+            title="Open in Discord"
+          >
+            <ExternalLink size={14} />
+          </a>
         </div>
       </div>
-      <p className="text-[#dcddde] line-clamp-3">{result.content}</p>
-    </Link>
+      <Link to={`/messages/${result.messageId}`} className="block">
+        <p className="text-[#dcddde] line-clamp-3">{result.content}</p>
+      </Link>
+    </div>
   )
 }
 
@@ -256,22 +282,31 @@ function CompactResultCard({ result, rank }: { result: SearchResult; rank: numbe
   const scorePercent = (result.score * 100).toFixed(1)
 
   return (
-    <Link
-      to={`/messages/${result.messageId}`}
-      className="block p-3 bg-[#36393f] rounded-lg hover:bg-[#3f4248] transition-colors"
-    >
+    <div className="p-3 bg-[#36393f] rounded-lg hover:bg-[#3f4248] transition-colors">
       <div className="flex items-center gap-2 mb-1.5">
         <span className="text-xs font-mono text-gray-500 w-5">#{rank}</span>
         <span className="text-sm font-medium text-white truncate flex-1">{result.username}</span>
         <span className="text-xs px-1.5 py-0.5 bg-[#5865f2]/20 text-[#5865f2] rounded">
           {scorePercent}%
         </span>
+        <a
+          href={getDiscordMessageUrl(result.guildId, result.channelId, result.messageId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-gray-400 hover:text-[#5865f2] transition-colors"
+          title="Open in Discord"
+        >
+          <ExternalLink size={12} />
+        </a>
       </div>
-      <p className="text-sm text-[#dcddde] line-clamp-2 pl-7">{result.content}</p>
-      <div className="flex items-center gap-1 mt-1.5 pl-7 text-xs text-gray-500">
-        <Hash size={10} />
-        {result.channelName}
-      </div>
-    </Link>
+      <Link to={`/messages/${result.messageId}`} className="block">
+        <p className="text-sm text-[#dcddde] line-clamp-2 pl-7">{result.content}</p>
+        <div className="flex items-center gap-1 mt-1.5 pl-7 text-xs text-gray-500">
+          <Hash size={10} />
+          {result.channelName}
+        </div>
+      </Link>
+    </div>
   )
 }

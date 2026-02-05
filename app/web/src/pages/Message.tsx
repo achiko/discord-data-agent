@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Hash, Loader2, Pin, Paperclip } from 'lucide-react'
-import { api } from '../lib/api'
+import { ArrowLeft, Hash, Loader2, Pin, Paperclip, ExternalLink } from 'lucide-react'
+import { api, getDiscordMessageUrl } from '../lib/api'
 import { format } from 'date-fns'
 
 export default function MessagePage() {
@@ -47,9 +47,22 @@ export default function MessagePage() {
       </Link>
 
       {/* Channel Info */}
-      <div className="flex items-center gap-2 text-gray-400 mb-4">
-        <Hash size={16} />
-        <span>{message.channelName}</span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-gray-400">
+          <Hash size={16} />
+          <span>{message.channelName}</span>
+        </div>
+        {message.guildId && (
+          <a
+            href={getDiscordMessageUrl(message.guildId, message.channelId, message.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#5865f2] transition-colors"
+          >
+            <ExternalLink size={14} />
+            Open in Discord
+          </a>
+        )}
       </div>
 
       {/* Messages with context */}

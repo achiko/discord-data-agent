@@ -126,6 +126,7 @@ export interface SearchResult {
   messageId: string;
   channelId: string;
   channelName: string;
+  guildId: string;
   userId: string;
   username: string;
   content: string;

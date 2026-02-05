@@ -27,6 +27,7 @@ export async function messagesRoutes(fastify: FastifyInstance) {
           reactionsJson: messages.reactionsJson,
           channelId: messages.channelId,
           channelName: channels.name,
+          guildId: channels.guildId,
           userId: messages.userId,
           username: users.username,
           userAvatar: users.avatarUrl,
