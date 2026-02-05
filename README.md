@@ -2,42 +2,6 @@
 
 A CLI application for downloading, storing, and searching Discord messages with semantic search capabilities powered by vector embeddings.
 
-## How to Start the Project
-
-```bash
-# 1. Navigate to the app directory
-cd app
-
-# 2. Install dependencies
-npm install
-
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env and add your DISCORD_TOKEN and OPENAI_API_KEY (optional)
-
-# 4. Start the database
-docker compose up -d postgres
-
-# 5. Run database migrations
-npm run db:migrate
-
-# 6. Build the project
-npm run build
-
-# 7. Start the web interface
-npm run dev -- start
-# Open http://localhost:3000 in your browser
-```
-
-## Features
-
-- **Export Discord Data**: Use DiscordChatExporter via Docker to export channels and guilds
-- **PostgreSQL Storage**: Store messages with full-text search indexes
-- **Vector Embeddings**: Generate OpenAI embeddings for semantic search
-- **Hybrid Search**: Combine keyword and semantic search for best results
-- **Web Interface**: React-based dashboard for search and analytics
-- **Incremental Sync**: Track exports to only fetch new messages
-
 ## Quick Start
 
 ### Prerequisites
@@ -51,83 +15,51 @@ npm run dev -- start
 
 ```bash
 cd app
-
-# Install dependencies
 npm install
-
-# Copy environment file and configure
-cp .env.example .env
-# Edit .env with your Discord token and OpenAI key (optional)
-
-# Start PostgreSQL with pgvector
+cp .env.example .env   # Edit with your tokens
 docker compose up -d postgres
-
-# Run database migrations
 npm run db:migrate
-
-# Build the CLI
 npm run build
+npm run dev -- start   # Open http://localhost:3000
 ```
 
-### Usage
+## Features
 
-#### List your Discord servers
+- **Export Discord Data**: Use DiscordChatExporter via Docker to export channels and guilds
+- **PostgreSQL Storage**: Store messages with full-text search indexes
+- **Vector Embeddings**: Generate OpenAI embeddings for semantic search
+- **Hybrid Search**: Combine keyword and semantic search for best results
+- **Web Interface**: React-based dashboard for search and analytics
+- **Incremental Sync**: Track exports to only fetch new messages
+
+## Usage
+
 ```bash
+# List servers and channels
 npm run dev -- guilds
-```
-
-#### List channels in a server
-```bash
 npm run dev -- channels --guild <guild_id>
-```
 
-#### Export a channel
-```bash
-# Export all messages
+# Export messages
 npm run dev -- export --channel <channel_id>
-
-# Export messages from the last 30 days
 npm run dev -- export --channel <channel_id> --since 30d
-
-# Export an entire guild
 npm run dev -- export --guild <guild_id> --since 2024-01-01
-```
 
-#### Ingest exported data
-```bash
+# Ingest and embed
 npm run dev -- ingest
-```
+npm run dev -- embed    # Requires OpenAI API key
 
-#### Generate embeddings (requires OpenAI API key)
-```bash
-npm run dev -- embed
-```
-
-#### Search messages
-```bash
-# Hybrid search (keyword + semantic)
+# Search
 npm run dev -- search "your query"
-
-# Keyword only
 npm run dev -- search "exact phrase" --type keyword
-
-# Semantic only (requires embeddings)
 npm run dev -- search "related concept" --type semantic
-```
 
-#### Start the web interface
-```bash
-npm run dev -- start
-# Visit http://localhost:3000
+# Web interface
+npm run dev -- start    # http://localhost:3000
 ```
 
 ## Configuration
 
-Configuration can be set via:
-1. Environment variables (highest priority)
-2. Config file at `~/.discord-analyzer/config.yaml`
-
-### Environment Variables
+Set via environment variables or config file at `~/.discord-analyzer/config.yaml`:
 
 ```env
 DISCORD_TOKEN=your_discord_token
@@ -137,10 +69,7 @@ API_PORT=3001
 WEB_PORT=3000
 ```
 
-### Interactive Configuration
-```bash
-npm run dev -- config init
-```
+Interactive setup: `npm run dev -- config init`
 
 ## Architecture
 
@@ -148,35 +77,52 @@ npm run dev -- config init
 app/
 ├── src/
 │   ├── commands/       # CLI commands
-│   ├── services/       # Business logic
+│   ├── services/       # Business logic (search, embeddings)
 │   ├── db/             # Database schema and client
 │   ├── server/         # Fastify API server
 │   └── utils/          # Utilities
-└── web/                # React frontend
+├── web/                # React frontend
+└── docs/               # Technical documentation
 ```
 
 ## Tech Stack
 
-- **Runtime**: Node.js 20+
-- **Language**: TypeScript
-- **CLI**: Commander.js + Inquirer
-- **Backend**: Fastify
-- **Database**: PostgreSQL 16 + pgvector
-- **ORM**: Drizzle ORM
-- **Embeddings**: OpenAI text-embedding-3-small
-- **Frontend**: React + Vite + TailwindCSS
+| Component | Technology |
+|-----------|------------|
+| Runtime | Node.js 20+ |
+| Language | TypeScript |
+| CLI | Commander.js + Inquirer |
+| Backend | Fastify |
+| Database | PostgreSQL 16 + pgvector |
+| ORM | Drizzle ORM |
+| Embeddings | OpenAI text-embedding-3-small (1536 dim) |
+| Frontend | React + Vite + TailwindCSS |
+
+## Documentation
+
+For in-depth technical details about the search system:
+
+| Document | Description |
+|----------|-------------|
+| [Search Specification](app/docs/SEARCH_SPECIFICATION.md) | Implementation details, API reference, database schema, and architecture diagrams |
+| [Search Techniques Research](app/docs/SEARCH_TECHNIQUES_RESEARCH.md) | Theoretical foundations of BM25, vector embeddings, hybrid search, and ANN algorithms with academic references |
+
+### Search System Overview
+
+The search system supports three modes:
+
+- **Keyword Search**: PostgreSQL full-text search with `ts_rank()` and GIN indexes
+- **Semantic Search**: Vector similarity using pgvector with IVFFLAT indexing
+- **Hybrid Search**: Merges both approaches, sorted by score with deduplication
+
+See the [Search Specification](app/docs/SEARCH_SPECIFICATION.md) for SQL patterns and the [Research Document](app/docs/SEARCH_TECHNIQUES_RESEARCH.md) for algorithm theory.
 
 ## Development
 
 ```bash
-# Run CLI in development mode
-npm run dev -- <command>
-
-# Build
-npm run build
-
-# Run web UI in development mode
-cd web && npm run dev
+npm run dev -- <command>    # CLI development mode
+npm run build               # Build project
+cd web && npm run dev       # Web UI development
 ```
 
 ## License
