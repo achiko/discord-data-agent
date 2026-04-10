@@ -1,4 +1,5 @@
 import Docker from 'dockerode';
+import { Writable } from 'stream';
 import { logger } from './logger.js';
 
 const docker = new Docker();
@@ -10,12 +11,50 @@ export interface ContainerRunOptions {
   volumes?: Record<string, { bind: string; mode: 'ro' | 'rw' }>;
   autoRemove?: boolean;
   networkMode?: string;
+  tty?: boolean;
+  liveOutput?: boolean;
+  stdoutTarget?: NodeJS.WritableStream;
+  stderrTarget?: NodeJS.WritableStream;
 }
 
 export interface ContainerOutput {
   exitCode: number;
   stdout: string;
   stderr: string;
+}
+
+interface BufferedSink {
+  sink: Writable;
+  done: Promise<void>;
+  getOutput: () => string;
+}
+
+function createBufferedSink(target?: NodeJS.WritableStream): BufferedSink {
+  let output = '';
+
+  const sink = new Writable({
+    write(chunk, _encoding, callback) {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      output += buffer.toString();
+
+      if (target) {
+        target.write(buffer);
+      }
+
+      callback();
+    },
+  });
+
+  const done = new Promise<void>((resolve, reject) => {
+    sink.once('finish', resolve);
+    sink.once('error', reject);
+  });
+
+  return {
+    sink,
+    done,
+    getOutput: () => output,
+  };
 }
 
 export async function isDockerRunning(): Promise<boolean> {
@@ -61,7 +100,17 @@ export async function pullImageIfNeeded(image: string): Promise<void> {
 }
 
 export async function runContainer(options: ContainerRunOptions): Promise<ContainerOutput> {
-  const { image, command = [], env = {}, volumes = {}, autoRemove = true } = options;
+  const {
+    image,
+    command = [],
+    env = {},
+    volumes = {},
+    autoRemove = true,
+    tty = false,
+    liveOutput = false,
+    stdoutTarget,
+    stderrTarget,
+  } = options;
 
   // Ensure image is available
   await pullImageIfNeeded(image);
@@ -84,6 +133,7 @@ export async function runContainer(options: ContainerRunOptions): Promise<Contai
       Binds: binds,
       AutoRemove: autoRemove,
     },
+    Tty: tty,
     AttachStdout: true,
     AttachStderr: true,
   });
@@ -97,17 +147,39 @@ export async function runContainer(options: ContainerRunOptions): Promise<Contai
     stderr: true,
   });
 
-  // Demultiplex stdout and stderr
-  stream.on('data', (chunk: Buffer) => {
-    const str = chunk.toString();
-    // Docker multiplexes stdout/stderr with a header
-    // For simplicity, we'll capture both as stdout
-    stdout += str;
+  const stdoutSink = createBufferedSink(stdoutTarget || (liveOutput ? process.stdout : undefined));
+  const stderrSink = createBufferedSink(stderrTarget || (liveOutput ? process.stderr : undefined));
+
+  const outputComplete = new Promise<void>((resolve, reject) => {
+    let finalized = false;
+
+    const finalize = () => {
+      if (finalized) {
+        return;
+      }
+      finalized = true;
+
+      stdoutSink.sink.end();
+      stderrSink.sink.end();
+
+      Promise.all([stdoutSink.done, stderrSink.done]).then(() => resolve(), reject);
+    };
+
+    stream.once('error', reject);
+    stream.once('end', finalize);
+    stream.once('close', finalize);
   });
+
+  // Docker attaches stdout/stderr over a multiplexed stream unless TTY is enabled.
+  docker.modem.demuxStream(stream, stdoutSink.sink, stderrSink.sink);
 
   await container.start();
 
   const result = await container.wait();
+  await outputComplete;
+
+  stdout = stdoutSink.getOutput();
+  stderr = stderrSink.getOutput();
 
   return {
     exitCode: result.StatusCode,
