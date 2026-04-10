@@ -15,6 +15,7 @@ export interface ExporterOptions {
   format?: 'json' | 'html' | 'csv';
   includeThreads?: boolean;
   outputDir: string;
+  liveOutput?: boolean;
 }
 
 export interface ExportResult {
@@ -101,10 +102,16 @@ export async function runDiscordExporter(options: ExporterOptions): Promise<Expo
       [outputDir]: { bind: '/app/out', mode: 'rw' },
     },
     autoRemove: true,
+    tty: options.liveOutput,
+    liveOutput: options.liveOutput,
   });
 
   if (result.exitCode !== 0) {
     logger.debug('Exporter output', { stdout: result.stdout, stderr: result.stderr });
+    if (options.liveOutput) {
+      throw new Error(`Export failed with exit code ${result.exitCode}. See live DiscordChatExporter output above.`);
+    }
+
     throw new Error(`Export failed with exit code ${result.exitCode}: ${result.stderr || result.stdout}`);
   }
 

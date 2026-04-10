@@ -57,6 +57,8 @@ npm run dev -- search "related concept" --type semantic
 npm run dev -- start    # http://localhost:3000
 ```
 
+`export` now streams DiscordChatExporter output live in the console so you can see progress and status messages while the export runs.
+
 ## Configuration
 
 Set via environment variables or config file at `~/.discord-analyzer/config.yaml`:

@@ -1,6 +1,5 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import ora from 'ora';
 import { getConfig, validateConfig } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { runDiscordExporter } from '../services/discord-exporter.js';
@@ -35,7 +34,7 @@ export const exportCommand = new Command('export')
       return;
     }
 
-    const spinner = ora('Starting export...').start();
+    logger.info('Starting export. Live DiscordChatExporter output will stream below.');
 
     try {
       const result = await runDiscordExporter({
@@ -47,16 +46,16 @@ export const exportCommand = new Command('export')
         format: options.format,
         includeThreads: options.threads,
         outputDir: config.exports.dir,
+        liveOutput: true,
       });
 
-      spinner.succeed(`Export completed: ${result.outputPath}`);
+      logger.success(`Export completed: ${result.outputPath}`);
 
       if (result.messageCount !== undefined) {
         logger.info(`Exported ${result.messageCount} messages`);
       }
     } catch (error) {
-      spinner.fail('Export failed');
-      logger.error((error as Error).message);
+      logger.failure(`Export failed: ${(error as Error).message}`);
       process.exit(1);
     }
   });
